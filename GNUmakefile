@@ -12,6 +12,8 @@ ADDITIONAL_LDFLAGS  += -L/System/Library/Frameworks/FreeBSDKit.framework -lFreeB
 # Link against libgeom
 ADDITIONAL_LDFLAGS += -lgeom
 
+# Set installation directory for system utilities
+TOOL_INSTALLDIR = /System/Tools
+
 include $(GNUSTEP_MAKEFILES)/tool.make
 
-# This should be installed into /System/Tools on Gershwin systems

@@ -126,7 +126,7 @@
 - (void)listDisks:(NSArray<NSString *> *)arguments {
     NSString *format = [self getOutputFormat:arguments];
 
-    NSArray *disks = [FBDiskManager getDisks];
+    NSArray *disks = [FBDiskManager getDiskNames];
     [self outputData:disks withFormat:format];
 }
 
@@ -141,7 +141,8 @@
     NSString *format = [self getOutputFormat:arguments];
     NSString *diskName = arguments[0];
 
-    NSDictionary *diskInfo = @{ @"disk": diskName, @"info": @"Sample Disk Info" }; // Placeholder
+    // NSDictionary *diskInfo = @{ @"disk": diskName, @"info": @"Sample Disk Info" }; // Placeholder
+    NSMutableDictionary *diskInfo = [FBDiskManager getDiskInfo:diskName];
     [self outputData:diskInfo withFormat:format];
 }
 
