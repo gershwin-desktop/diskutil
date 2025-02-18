@@ -2,6 +2,5 @@
 
 @interface DiskUtil : NSObject
 - (void)handleCommand:(NSString *)command withArguments:(NSArray<NSString *> *)arguments;
-// - (void)listDiskProvidersAsJSON;
 @end
 

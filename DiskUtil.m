@@ -7,8 +7,8 @@
 
 - (void)handleCommand:(NSString *)command withArguments:(NSArray<NSString *> *)arguments {
     NSDictionary *commands = @{
-        @"listDiskProviders" : NSStringFromSelector(@selector(listDiskProviders:)),
-        @"list"   : NSStringFromSelector(@selector(listDisks:)),
+        @"list" : NSStringFromSelector(@selector(listDiskProviders:)),
+        @"listDisks"   : NSStringFromSelector(@selector(listDiskNames:)),
         @"info"   : NSStringFromSelector(@selector(diskInfo:)),
         @"mount"  : NSStringFromSelector(@selector(mountDisk:)),
         @"unmount": NSStringFromSelector(@selector(unmountDisk:))
@@ -112,7 +112,7 @@
     }
 }
 
-#pragma mark - List Disk Providers
+#pragma mark - List Disk (via GEOM Providers Info)
 
 - (void)listDiskProviders:(NSArray<NSString *> *)arguments {
     NSString *format = [self getOutputFormat:arguments];
@@ -121,9 +121,9 @@
     [self outputData:disksDictionary withFormat:format];
 }
 
-#pragma mark - List Disks (with JSON & XML Options)
+#pragma mark - List Disk Names (with JSON & XML Options)
 
-- (void)listDisks:(NSArray<NSString *> *)arguments {
+- (void)listDiskNames:(NSArray<NSString *> *)arguments {
     NSString *format = [self getOutputFormat:arguments];
 
     NSArray *disks = [FBDiskManager getDiskNames];
@@ -195,8 +195,8 @@
 - (void)printUsage {
     printf("Usage: diskutil <command> [options]\n");
     printf("Available commands:\n");
-    printf("  listDiskProviders       - List available disks with provider info [--json | --xml]\n");
-    printf("  list                    - List available disks [--json | --xml]\n");
+    printf("  list       - List available disks with provider info [--json | --xml]\n");
+    printf("  listDisks                    - List available disks [--json | --xml]\n");
     printf("  info <disk>             - Show disk information [--json | --xml]\n");
     printf("  mount <disk> [--readonly] - Mount a disk\n");
     printf("  unmount <disk>          - Unmount a disk\n");
