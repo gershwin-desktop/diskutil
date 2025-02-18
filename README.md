@@ -2,10 +2,6 @@
 
 Inspired by the MacOS command line utility of the same name. This cli app is made with GNUstep and heavily leverages ZFS and FreeBSD tools
 
-### Dependencies
-
-- Gershwin/GNUstep environment
-- FreeBSDKit system level framework
 
 ### Implemented commands
 
@@ -26,3 +22,9 @@ WIll output the equivalent of FreeBSD's `geom disk list` but only for the specif
 
 - mount
 - unmount
+
+
+### Dependencies
+
+- Gershwin/GNUstep environment
+- FreeBSDKit system level framework
