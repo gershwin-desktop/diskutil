@@ -5,8 +5,8 @@
 
 @implementation DiskUtil
 
-- (void)handleCommand:(NSString *)command
-        withArguments:(NSArray<NSString *> *)arguments {
+- (void)handleCommand:(NSString *)command withArguments:(NSArray<NSString *> *)arguments
+{
   NSDictionary *commands = @{
     @"list" : NSStringFromSelector(@selector(listDiskProviders:)),
     @"listDisks" : NSStringFromSelector(@selector(listDiskNames:)),
@@ -18,7 +18,8 @@
   SEL selector = NSSelectorFromString(commands[command]);
   if (selector && [self respondsToSelector:selector]) {
     [self performSelector:selector withObject:arguments];
-  } else {
+  }
+  else {
     printf("Unknown command: %s", [command UTF8String]);
     [self printUsage];
   }
@@ -28,26 +29,24 @@
 // if not necessary
 #pragma mark - Output Formatting Helper
 
-- (NSString *)formatData:(id)data asFormat:(NSString *)format {
+- (NSString *)formatData:(id)data asFormat:(NSString *)format
+{
   NSError *error;
 
   if ([format isEqualToString:@"json"]) {
-    NSData *jsonData =
-        [NSJSONSerialization dataWithJSONObject:data
-                                        options:NSJSONWritingPrettyPrinted
-                                          error:&error];
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:data
+                                                       options:NSJSONWritingPrettyPrinted
+                                                         error:&error];
     if (!jsonData) {
       NSLog(@"Error creating JSON: %@", error);
       return nil;
     }
-    return [[NSString alloc] initWithData:jsonData
-                                 encoding:NSUTF8StringEncoding];
+    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
   }
 
   if ([format isEqualToString:@"xml"]) {
-    NSMutableString *xmlString = [NSMutableString
-        stringWithString:
-            @"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n"];
+    NSMutableString *xmlString =
+        [NSMutableString stringWithString:@"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n"];
     [self appendXML:data toString:xmlString withIndent:@"  "];
     [xmlString appendString:@"</root>\n"];
     return xmlString;
@@ -56,9 +55,8 @@
   return nil; // Unsupported format
 }
 
-- (void)appendXML:(id)data
-         toString:(NSMutableString *)xmlString
-       withIndent:(NSString *)indent {
+- (void)appendXML:(id)data toString:(NSMutableString *)xmlString withIndent:(NSString *)indent
+{
   if ([data isKindOfClass:[NSDictionary class]]) {
     for (NSString *key in data) {
       [xmlString appendFormat:@"%@<%@>\n", indent, key];
@@ -67,71 +65,79 @@
            withIndent:[indent stringByAppendingString:@"  "]];
       [xmlString appendFormat:@"%@</%@>\n", indent, key];
     }
-  } else if ([data isKindOfClass:[NSArray class]]) {
+  }
+  else if ([data isKindOfClass:[NSArray class]]) {
     for (id item in data) {
       [xmlString appendFormat:@"%@<item>\n", indent];
-      [self appendXML:item
-             toString:xmlString
-           withIndent:[indent stringByAppendingString:@"  "]];
+      [self appendXML:item toString:xmlString withIndent:[indent stringByAppendingString:@"  "]];
       [xmlString appendFormat:@"%@</item>\n", indent];
     }
-  } else {
+  }
+  else {
     [xmlString appendFormat:@"%@%@\n", indent, data];
   }
 }
 
-- (void)outputData:(id)data withFormat:(NSString *)format {
+- (void)outputData:(id)data withFormat:(NSString *)format
+{
   if ([format isEqualToString:@"text"]) {
     [self outputPlainText:data];
-  } else {
+  }
+  else {
     NSString *formattedData = [self formatData:data asFormat:format];
     if (formattedData) {
       printf("%s\n", formattedData.UTF8String);
-    } else {
+    }
+    else {
       printf("Invalid format specified: %s", [format UTF8String]);
     }
   }
 }
 
-- (void)outputPlainText:(id)data {
+- (void)outputPlainText:(id)data
+{
   [self outputPlainText:data withIndent:@""];
 }
 
-- (void)outputPlainText:(id)data withIndent:(NSString *)indent {
+- (void)outputPlainText:(id)data withIndent:(NSString *)indent
+{
   if ([data isKindOfClass:[NSArray class]]) {
     for (id item in (NSArray *)data) {
       printf("%s%s\n", [indent UTF8String], [[item description] UTF8String]);
     }
-  } else if ([data isKindOfClass:[NSDictionary class]]) {
+  }
+  else if ([data isKindOfClass:[NSDictionary class]]) {
     for (NSString *key in [(NSDictionary *)data allKeys]) {
       id value = [(NSDictionary *)data objectForKey:key];
 
       // Print key-value pair on the same line
       printf("%s%s:  ", [indent UTF8String], [key UTF8String]);
 
-      if ([value isKindOfClass:[NSString class]] ||
-          [value isKindOfClass:[NSNumber class]]) {
+      if ([value isKindOfClass:[NSString class]] || [value isKindOfClass:[NSNumber class]]) {
         printf("%s\n", [[value description] UTF8String]);
-      } else if ([value isKindOfClass:[NSArray class]]) {
+      }
+      else if ([value isKindOfClass:[NSArray class]]) {
         printf("\n");
-        [self outputPlainText:value
-                   withIndent:[indent stringByAppendingString:@"    "]];
-      } else if ([value isKindOfClass:[NSDictionary class]]) {
+        [self outputPlainText:value withIndent:[indent stringByAppendingString:@"    "]];
+      }
+      else if ([value isKindOfClass:[NSDictionary class]]) {
         printf("\n");
-        [self outputPlainText:value
-                   withIndent:[indent stringByAppendingString:@"    "]];
-      } else {
+        [self outputPlainText:value withIndent:[indent stringByAppendingString:@"    "]];
+      }
+      else {
         printf("Unsupported Type\n");
       }
     }
-  } else {
+  }
+  else {
     printf("%s%s\n", [indent UTF8String], [[data description] UTF8String]);
   }
 }
 
 #pragma mark - List Disk (via GEOM Providers Info)
 
-- (void)listDiskProviders:(NSArray<NSString *> *)arguments {
+- (void)listDiskProviders:(NSArray<NSString *> *)arguments
+{
   NSString *format = [self getOutputFormat:arguments];
 
   NSMutableDictionary *disksDictionary = [FBDiskManager getAllDiskInfo];
@@ -140,7 +146,8 @@
 
 #pragma mark - List Disk Names (with JSON & XML Options)
 
-- (void)listDiskNames:(NSArray<NSString *> *)arguments {
+- (void)listDiskNames:(NSArray<NSString *> *)arguments
+{
   NSString *format = [self getOutputFormat:arguments];
 
   NSArray *disks = [FBDiskManager getDiskNames];
@@ -149,7 +156,8 @@
 
 #pragma mark - Disk Info
 
-- (void)diskInfo:(NSArray<NSString *> *)arguments {
+- (void)diskInfo:(NSArray<NSString *> *)arguments
+{
   if (arguments.count < 1) {
     printf("Usage: diskutil info <disk> [--json | --xml]\n");
     return;
@@ -166,7 +174,8 @@
 
 #pragma mark - Mount Disk (No JSON/XML Output)
 
-- (void)mountDisk:(NSArray<NSString *> *)arguments {
+- (void)mountDisk:(NSArray<NSString *> *)arguments
+{
   if (arguments.count < 1) {
     printf("Usage: diskutil mount <disk> [--readonly]\n");
     return;
@@ -177,14 +186,16 @@
 
   if (readOnly) {
     printf("Mounting %s as read-only...\n", [diskName UTF8String]);
-  } else {
+  }
+  else {
     printf("Mounting %s...\n", [diskName UTF8String]);
   }
 }
 
 #pragma mark - Unmount Disk (No JSON/XML Output)
 
-- (void)unmountDisk:(NSArray<NSString *> *)arguments {
+- (void)unmountDisk:(NSArray<NSString *> *)arguments
+{
   if (arguments.count < 1) {
     printf("Usage: diskutil unmount <disk>\n");
     return;
@@ -196,7 +207,8 @@
 
 #pragma mark - Helper Methods
 
-- (NSString *)getOutputFormat:(NSArray<NSString *> *)arguments {
+- (NSString *)getOutputFormat:(NSArray<NSString *> *)arguments
+{
   if ([self hasFlag:@"--json" inArguments:arguments]) {
     return @"json";
   }
@@ -206,19 +218,20 @@
   return @"text"; // Default to plain text
 }
 
-- (BOOL)hasFlag:(NSString *)flag inArguments:(NSArray<NSString *> *)arguments {
+- (BOOL)hasFlag:(NSString *)flag inArguments:(NSArray<NSString *> *)arguments
+{
   return [arguments containsObject:flag];
 }
 
-- (void)printUsage {
+- (void)printUsage
+{
   printf("Usage: diskutil <command> [options]\n");
   printf("Available commands:\n");
   printf("  list       - List available disks with provider info [--json | "
          "--xml]\n");
   printf("  listDisks                    - List available disks [--json | "
          "--xml]\n");
-  printf(
-      "  info <disk>             - Show disk information [--json | --xml]\n");
+  printf("  info <disk>             - Show disk information [--json | --xml]\n");
   printf("  mount <disk> [--readonly] - Mount a disk\n");
   printf("  unmount <disk>          - Unmount a disk\n");
 }
