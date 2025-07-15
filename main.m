@@ -4,8 +4,10 @@
 int main(int argc, const char *argv[])
 {
   @autoreleasepool {
+    DiskUtil *diskUtil = [[DiskUtil alloc] init];
+    
     if (argc < 2) {
-      NSLog(@"Usage: diskutil <command> [options]");
+      [diskUtil printUsage];
       return 1;
     }
 
@@ -18,7 +20,6 @@ int main(int argc, const char *argv[])
     }
 
     // Dispatch command
-    DiskUtil *diskUtil = [[DiskUtil alloc] init];
     [diskUtil handleCommand:command withArguments:arguments];
   }
   return 0;

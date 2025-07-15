@@ -37,11 +37,12 @@
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:data
                                                        options:NSJSONWritingPrettyPrinted
                                                          error:&error];
-    if (!jsonData) {
-      NSLog(@"Error creating JSON: %@", error);
+    if (jsonData) {
+      return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    } else {
+      NSLog(@"Error serializing JSON: %@", error.localizedDescription);
       return nil;
     }
-    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
   }
 
   if ([format isEqualToString:@"xml"]) {
@@ -54,6 +55,7 @@
 
   return nil; // Unsupported format
 }
+
 
 - (void)appendXML:(id)data toString:(NSMutableString *)xmlString withIndent:(NSString *)indent
 {
@@ -107,30 +109,67 @@
     }
   }
   else if ([data isKindOfClass:[NSDictionary class]]) {
-    for (NSString *key in [(NSDictionary *)data allKeys]) {
-      id value = [(NSDictionary *)data objectForKey:key];
-
-      // Print key-value pair on the same line
-      printf("%s%s:  ", [indent UTF8String], [key UTF8String]);
-
-      if ([value isKindOfClass:[NSString class]] || [value isKindOfClass:[NSNumber class]]) {
-        printf("%s\n", [[value description] UTF8String]);
-      }
-      else if ([value isKindOfClass:[NSArray class]]) {
-        printf("\n");
-        [self outputPlainText:value withIndent:[indent stringByAppendingString:@"    "]];
-      }
-      else if ([value isKindOfClass:[NSDictionary class]]) {
-        printf("\n");
-        [self outputPlainText:value withIndent:[indent stringByAppendingString:@"    "]];
-      }
-      else {
-        printf("Unsupported Type\n");
-      }
-    }
+    [self outputOrderedDictionary:(NSDictionary *)data withIndent:indent];
   }
   else {
     printf("%s%s\n", [indent UTF8String], [[data description] UTF8String]);
+  }
+}
+
+- (void)outputOrderedDictionary:(NSDictionary *)data withIndent:(NSString *)indent
+{
+  // Define the preferred order for disk information
+  NSArray *preferredOrder = @[
+    @"name",
+    @"description", 
+    @"path",
+    @"mode",
+    @"mediasize_bytes",
+    @"sectorsize_bytes",
+    @"stripe_size",
+    @"stripe_offset",
+    @"filesystem",
+    @"zfs_pool",
+    @"zfs_status",
+    @"zfs_datasets_total",
+    @"zfs_encrypted_datasets"
+  ];
+  
+  // First, output keys in preferred order
+  for (NSString *key in preferredOrder) {
+    id value = data[key];
+    if (value) {
+      [self outputKeyValue:key value:value withIndent:indent];
+    }
+  }
+  
+  // Then output any remaining keys that weren't in the preferred order
+  for (NSString *key in [data allKeys]) {
+    if (![preferredOrder containsObject:key]) {
+      id value = data[key];
+      [self outputKeyValue:key value:value withIndent:indent];
+    }
+  }
+}
+
+- (void)outputKeyValue:(NSString *)key value:(id)value withIndent:(NSString *)indent
+{
+  // Print key-value pair on the same line
+  printf("%s%s:  ", [indent UTF8String], [key UTF8String]);
+
+  if ([value isKindOfClass:[NSString class]] || [value isKindOfClass:[NSNumber class]]) {
+    printf("%s\n", [[value description] UTF8String]);
+  }
+  else if ([value isKindOfClass:[NSArray class]]) {
+    printf("\n");
+    [self outputPlainText:value withIndent:[indent stringByAppendingString:@"    "]];
+  }
+  else if ([value isKindOfClass:[NSDictionary class]]) {
+    printf("\n");
+    [self outputPlainText:value withIndent:[indent stringByAppendingString:@"    "]];
+  }
+  else {
+    printf("Unsupported Type\n");
   }
 }
 
@@ -212,9 +251,17 @@
     return;
   }
 
-  // Generate mount point
-  NSString *deviceName = [devicePath lastPathComponent];
-  NSString *mountPoint = [NSString stringWithFormat:@"/mnt/%@", deviceName];
+  // Generate mount point using volume name (macOS style)
+  NSString *volumeName = [FBDiskManager getVolumeLabel:devicePath];
+  NSString *mountPoint;
+  
+  if (volumeName) {
+    mountPoint = [NSString stringWithFormat:@"/Volumes/%@", volumeName];
+  } else {
+    // Fallback to device name if no volume label found
+    NSString *deviceName = [devicePath lastPathComponent];
+    mountPoint = [NSString stringWithFormat:@"/Volumes/%@", deviceName];
+  }
 
   printf("Mounting %s (%s) at %s%s...\n", 
          [devicePath UTF8String], 
