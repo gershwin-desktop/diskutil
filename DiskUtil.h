@@ -2,4 +2,5 @@
 
 @interface DiskUtil : NSObject
 - (void)handleCommand:(NSString *)command withArguments:(NSArray<NSString *> *)arguments;
+- (void)printUsage;
 @end
