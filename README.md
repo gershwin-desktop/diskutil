@@ -15,13 +15,15 @@ WIll output the names of all disk devices attached to FreeBSD. Supports plain te
 
 > `diskutil info <diskname> [--json | --xml]` 
 
-WIll output the equivalent of FreeBSD's `geom disk list` but only for the specified disk. Supports plain text, JSON and XML output formats
+WIll output the equivalent of FreeBSD's `geom disk list` as well as some basic high level ZFS info if available, but only for the specified disk. Supports plain text, JSON and XML output formats
 
+> `diskutil mount <diskname>`
 
-### TODO
+Will mount the disk to /Volumes
 
-- mount
-- unmount
+> `diskutil unmount <diskname>`
+
+Will unmount the disk from /Volumes
 
 
 ### Dependencies
