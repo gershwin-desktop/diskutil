@@ -128,6 +128,7 @@
     @"sectorsize_bytes",
     @"stripe_size",
     @"stripe_offset",
+    @"filesystem",
     @"zfs_pool",
     @"zfs_status",
     @"zfs_datasets_total",
