@@ -184,11 +184,60 @@
   NSString *diskName = arguments[0];
   BOOL readOnly = [self hasFlag:@"--readonly" inArguments:arguments];
 
-  if (readOnly) {
-    printf("Mounting %s as read-only...\n", [diskName UTF8String]);
+  // Construct device path
+  NSString *devicePath;
+  if ([diskName hasPrefix:@"/dev/"]) {
+    devicePath = diskName;
+  } else {
+    devicePath = [NSString stringWithFormat:@"/dev/%@", diskName];
   }
-  else {
-    printf("Mounting %s...\n", [diskName UTF8String]);
+
+  // Check if device exists
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  if (![fileManager fileExistsAtPath:devicePath]) {
+    printf("Error: Device %s does not exist\n", [devicePath UTF8String]);
+    return;
+  }
+
+  // Check if already mounted
+  if ([FBDiskManager isMounted:devicePath]) {
+    printf("Error: Device %s is already mounted\n", [devicePath UTF8String]);
+    return;
+  }
+
+  // Detect filesystem
+  NSString *filesystem = [FBDiskManager detectFilesystem:devicePath];
+  if (!filesystem || [filesystem isEqualToString:@"unknown"]) {
+    printf("Error: Unable to detect filesystem type for %s\n", [devicePath UTF8String]);
+    return;
+  }
+
+  // Generate mount point
+  NSString *deviceName = [devicePath lastPathComponent];
+  NSString *mountPoint = [NSString stringWithFormat:@"/mnt/%@", deviceName];
+
+  printf("Mounting %s (%s) at %s%s...\n", 
+         [devicePath UTF8String], 
+         [filesystem UTF8String],
+         [mountPoint UTF8String],
+         readOnly ? " (read-only)" : "");
+
+  // Add read-only option if specified
+  if (readOnly) {
+    filesystem = [NSString stringWithFormat:@"%@,ro", filesystem];
+  }
+
+  // Attempt mount
+  NSError *error = nil;
+  BOOL success = [FBDiskManager mountVolume:devicePath
+                                 mountPoint:mountPoint
+                                 filesystem:filesystem
+                                      error:&error];
+
+  if (success) {
+    printf("Successfully mounted %s at %s\n", [devicePath UTF8String], [mountPoint UTF8String]);
+  } else {
+    printf("Error mounting %s: %s\n", [devicePath UTF8String], [[error localizedDescription] UTF8String]);
   }
 }
 
@@ -197,12 +246,52 @@
 - (void)unmountDisk:(NSArray<NSString *> *)arguments
 {
   if (arguments.count < 1) {
-    printf("Usage: diskutil unmount <disk>\n");
+    printf("Usage: diskutil unmount <disk|mountpoint>\n");
     return;
   }
 
-  NSString *diskName = arguments[0];
-  printf("Unmounting disk: %s\n", [diskName UTF8String]);
+  NSString *target = arguments[0];
+  NSString *mountPoint = nil;
+
+  // Determine if target is a device path or mount point
+  if ([target hasPrefix:@"/mnt/"] || [target hasPrefix:@"/"]) {
+    // Treat as mount point
+    mountPoint = target;
+  } else {
+    // Treat as device name, find its mount point
+    NSString *devicePath;
+    if ([target hasPrefix:@"/dev/"]) {
+      devicePath = target;
+    } else {
+      devicePath = [NSString stringWithFormat:@"/dev/%@", target];
+    }
+
+    // Find mount point for this device
+    NSArray *mountedVolumes = [FBDiskManager getMountedVolumes];
+    for (NSDictionary *mount in mountedVolumes) {
+      if ([mount[@"device"] isEqualToString:devicePath]) {
+        mountPoint = mount[@"mountpoint"];
+        break;
+      }
+    }
+
+    if (!mountPoint) {
+      printf("Error: Device %s is not mounted\n", [target UTF8String]);
+      return;
+    }
+  }
+
+  printf("Unmounting %s...\n", [mountPoint UTF8String]);
+
+  // Attempt unmount
+  NSError *error = nil;
+  BOOL success = [FBDiskManager unmountVolume:mountPoint error:&error];
+
+  if (success) {
+    printf("Successfully unmounted %s\n", [mountPoint UTF8String]);
+  } else {
+    printf("Error unmounting %s: %s\n", [mountPoint UTF8String], [[error localizedDescription] UTF8String]);
+  }
 }
 
 #pragma mark - Helper Methods
@@ -225,15 +314,13 @@
 
 - (void)printUsage
 {
-  printf("Usage: diskutil <command> [options]\n");
+  printf(" Usage: diskutil <command> [options]\n");
   printf("Available commands:\n");
-  printf("  list       - List available disks with provider info [--json | "
-         "--xml]\n");
-  printf("  listDisks                    - List available disks [--json | "
-         "--xml]\n");
-  printf("  info <disk>             - Show disk information [--json | --xml]\n");
-  printf("  mount <disk> [--readonly] - Mount a disk\n");
-  printf("  unmount <disk>          - Unmount a disk\n");
+  printf("  list                      - List available disks with provider info [--json | --xml]\n");
+  printf("  listDisks                 - List available disks [--json | --xml]\n");
+  printf("  info <disk>               - Show disk information [--json | --xml]\n");
+  printf("  mount <disk> [--readonly] - Mount a disk (auto-detects filesystem, rejects ZFS)\n");
+  printf("  unmount <disk|mountpoint> - Unmount a disk or mount point (rejects ZFS)\n");
 }
 
 @end
